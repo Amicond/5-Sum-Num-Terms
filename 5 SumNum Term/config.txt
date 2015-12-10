@@ -1,0 +1,17 @@
+Input path
+d:\results\
+points
+1
+Order
+7
+Spin operators in term: 2 -quadratic, 3 for cubic terms and so on
+6
+Creation/anihilation operators in term
+2
+Order Loops Not_Loops Not_Single
+2	3	0	0
+3	1	0	0
+4	18	0	0
+5	27	64	0	
+6	144	445	1
+7	560	3568	4
