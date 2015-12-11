@@ -1,11 +1,11 @@
 Input path
 d:\results\
 points
-1
+2
 Order
 7
 Spin operators in term: 2 -quadratic, 3 for cubic terms and so on
-6
+5
 Creation/anihilation operators in term
 2
 Order Loops Not_Loops Not_Single

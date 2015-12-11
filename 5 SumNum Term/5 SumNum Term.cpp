@@ -4,13 +4,14 @@
 //
 
 #include "stdafx.h"
+#include <string>
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <vector>
-#include <string>
 #include <iomanip>
 #include <algorithm>
+#include <unordered_map>
 
 using namespace std;
 vector<int> nodes_of_cur_route;
@@ -25,7 +26,7 @@ struct Soperator
 {
 	int n;
 	char name;
-	bool operator<(Soperator right)
+	bool operator<(const Soperator right)const
 	{
 		if(right.n>n)
 		{
@@ -44,7 +45,7 @@ struct Soperator
 					return false;
 			}
 	}
-	bool operator==(Soperator right)
+	bool operator==(const Soperator right)const
 	{
 		if((n==right.n)&&(name==right.name))
 		{
@@ -60,8 +61,8 @@ struct term
 {
 	char name;
 	vector<Soperator> Sop;
-	double value;
-	bool operator ==(term right)
+
+	bool operator ==(const term right)const
 	{
 		if(name!=right.name)
 			return false;
@@ -72,11 +73,11 @@ struct term
 				return false;
 		return true;
 	}
-	term operator+(term right)
+	/*term operator+(term right)
 	{
 		value+=right.value;
 		return *this;
-	}
+	}*/
 	bool operator<(const term t2)
 	{
 		for (int i = 0; i < Sop.size(); i++)
@@ -90,7 +91,29 @@ struct term
 	}
 };
 
-vector<term> results; //полные результаты и только 1ый и 2ой порядок
+namespace std{
+	template <>
+	struct hash<term>
+	{
+		std::size_t operator()(const term& k) const
+		{
+			using std::size_t;
+			using std::hash;
+			using std::string;
+
+			string s = " "+k.name;
+			for (auto &elem : k.Sop)
+			{
+				s += elem.name;
+				s += elem.n;
+			}
+
+			return (hash<string>()(s));
+		}
+	};
+}
+
+unordered_map<term,double> results; //полные результаты и только 1ый и 2ой порядок
 vector<int> good_nl[5];//
 
 
@@ -115,6 +138,8 @@ void sum_terms(int type,int order,int order_nums[][3],int point_num, vector<stri
 	cur_num=0;
 	string s,s2;
 	bool check;
+
+	double value;
 	while(subOrder<=order)
 	{
 		ostringstream str1;
@@ -127,9 +152,7 @@ void sum_terms(int type,int order,int order_nums[][3],int point_num, vector<stri
 
 		while(!terms_and_nodes.eof()&&stopflag)
 		{
-
-			getline(terms_and_nodes,s);
-			
+			getline(terms_and_nodes,s);	
 			if(s.length()>0)
 			{
 				if(s[0]=='n')//нашли новый маршрут
@@ -183,14 +206,14 @@ void sum_terms(int type,int order,int order_nums[][3],int point_num, vector<stri
 								line.str(s);
 								cur_term.name='C';
 								//	line>>cur_term.value;
-								cur_term.value=atof(s.c_str())/nodes_of_cur_route.size();
+								value=atof(s.c_str())/nodes_of_cur_route.size();
 								cur_term.Sop.clear();
 								sAmount=0;
 							}
 							else
 							{
 								cur_term.name=s[0];
-								cur_term.value=0;
+								value=0;
 								cur_term.Sop.clear();
 								sAmount=(s.find_first_of('$',0)-1);
 								if (sAmount<=s_length)
@@ -211,8 +234,8 @@ void sum_terms(int type,int order,int order_nums[][3],int point_num, vector<stri
 										s2=s[0];
 									}
 									s=s.substr(3);
-									cur_term.value=atof(s.c_str());
-									if (abs(cur_term.value)<0.0000001)
+									value=atof(s.c_str());
+									if (abs(value)<0.0000001)
 										if_cur_term = false;
 								}
 								else
@@ -293,18 +316,14 @@ void sum_terms(int type,int order,int order_nums[][3],int point_num, vector<stri
 
 								if(condition)//добавляем только члены содержащие 0 в инд
 								{
-									bool flag=true;
-									for(int ii=0;ii<results.size();ii++)
+									unordered_map<term,double>::iterator iter = results.find(cur_term);
+									if (iter != results.end())
 									{
-										if(cur_term==results[ii])
-										{
-											results[ii].value+=cur_term.value;
-											flag=false;
-										}
+										iter->second+=value;											
 									}
-									if(flag)
+									else
 									{
-										results.push_back(cur_term);
+										results.insert({ cur_term, value });
 									}
 								}
 
@@ -424,18 +443,18 @@ int _tmain(int argc, _TCHAR* argv[])
 		ofstream outres(ostr.str(),ios::out);
 		outres.setf(ios::fixed);
 		outres<<setprecision(10);
-		for(int i=0;i<results.size();i++)
+		for (const auto& elem : results)
 		{
-			if ((results[i].Sop.size()==(s_length-1))||abs(results[i].value) > 0.0000001)
+			if ((elem.first.Sop.size() == (s_length - 1)) || abs(elem.second) > 0.0000001)
 			{
-				outres << results[i].name;
-				for (int j = 0; j < results[i].Sop.size(); j++)
-					outres << results[i].Sop[j].name;
-				for (int j = 0; j < (int)results[i].Sop.size() - 1; j++)
-					outres << results[i].Sop[j].n << "_";
-				if (results[i].Sop.size()>0)
-					outres << results[i].Sop[results[i].Sop.size() - 1].n;
-				outres << " " << results[i].value;
+				outres << elem.first.name;
+				for (int j = 0; j < elem.first.Sop.size(); j++)
+					outres << elem.first.Sop[j].name;
+				for (int j = 0; j < (int)elem.first.Sop.size() - 1; j++)
+					outres << elem.first.Sop[j].n << "_";
+				if (elem.first.Sop.size()>0)
+					outres << elem.first.Sop[elem.first.Sop.size() - 1].n;
+				outres << " " << elem.second;
 				outres << "\n";
 			}
 		}
